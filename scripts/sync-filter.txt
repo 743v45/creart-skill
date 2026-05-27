@@ -1,0 +1,6 @@
+# sync-filter.txt — references 同步过滤规则
+# 每行一个 rsync exclude 模式，# 开头为注释，空行忽略
+# advisor-only 模式不携带脚本，依赖脚本的分类必须过滤
+
+# 依赖 scripts/edit.js
+editing-workflows/

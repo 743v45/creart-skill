@@ -39,6 +39,34 @@ if [[ "$LOCAL" != /* ]]; then
   LOCAL="$(pwd)/$LOCAL"
 fi
 
+# ── 读取过滤配置 ──
+FILTER_FILE="$(cd "$(dirname "$0")" && pwd)/sync-filter.txt"
+RSYNC_EXCLUDES=""
+GREP_EXCLUDE_ARGS=""
+FILTER_COUNT=0
+if [[ -f "$FILTER_FILE" ]]; then
+  while IFS= read -r line; do
+    line="${line%%#*}"
+    line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [[ -z "$line" ]] && continue
+    RSYNC_EXCLUDES="$RSYNC_EXCLUDES --exclude=$line"
+    GREP_EXCLUDE_ARGS="$GREP_EXCLUDE_ARGS -e $line"
+    FILTER_COUNT=$((FILTER_COUNT + 1))
+  done < "$FILTER_FILE"
+  echo "过滤规则: ${FILTER_COUNT} 条 (来源: ${FILTER_FILE})"
+fi
+
+# 辅助函数：检查文件路径是否被过滤规则命中
+is_filtered() {
+  local f="$1" pat
+  for pat in $GREP_EXCLUDE_ARGS; do
+    [[ "$pat" == "-e" ]] && continue
+    [[ "$f" == $pat ]] && return 0
+    [[ "$f" == $pat* ]] && return 0
+  done
+  return 1
+}
+
 if command -v shasum &>/dev/null; then
   HASH_CMD="shasum -a 256"
 else
@@ -51,8 +79,15 @@ trap 'rm -rf "$TMP"' EXIT
 # ── 阶段 A: 文件枚举与 Diff ──
 
 cd "$UPSTREAM"
-find . -type f -not -name '.*' | sed 's|^\./||' | sort > "$TMP/upstream.txt"
+find . -type f -not -name '.*' | sed 's|^\./||' | sort > "$TMP/upstream.raw.txt"
+if [[ -n "$GREP_EXCLUDE_ARGS" ]]; then
+  grep -v $GREP_EXCLUDE_ARGS "$TMP/upstream.raw.txt" > "$TMP/upstream.txt" || true
+else
+  cp "$TMP/upstream.raw.txt" "$TMP/upstream.txt"
+fi
+UP_RAW_COUNT=$(wc -l < "$TMP/upstream.raw.txt" | tr -d ' ')
 UP_COUNT=$(wc -l < "$TMP/upstream.txt" | tr -d ' ')
+FILTERED_COUNT=$((UP_RAW_COUNT - UP_COUNT))
 
 if [[ -d "$LOCAL" ]]; then
   cd "$LOCAL"
@@ -185,7 +220,9 @@ echo "Upstream: $UPSTREAM"
 echo "Local:    $LOCAL"
 echo ""
 echo "--- 摘要 ---"
-echo "Upstream 文件数:  $UP_COUNT"
+echo "Upstream 文件数:  $UP_RAW_COUNT"
+echo "过滤掉:           $FILTERED_COUNT"
+echo "实际同步数:       $UP_COUNT"
 echo "本地文件数:       $LC_COUNT"
 echo "新增:             $ADD_COUNT"
 echo "删除:             $DEL_COUNT"
@@ -292,7 +329,11 @@ if [[ "$DRY_RUN" != "true" ]]; then
     echo "正在复制 references ..."
     mkdir -p "$(dirname "$LOCAL")"
     rm -rf "$LOCAL"
-    cp -r "$UPSTREAM" "$LOCAL"
+    if [[ -n "$RSYNC_EXCLUDES" ]]; then
+      rsync -a $RSYNC_EXCLUDES "$UPSTREAM/" "$LOCAL"
+    else
+      cp -r "$UPSTREAM" "$LOCAL"
+    fi
     echo "复制完成: $LOCAL ($(find "$LOCAL" -type f | wc -l | tr -d ' ') 个文件)"
   fi
 else
