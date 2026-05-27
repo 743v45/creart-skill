@@ -19,7 +19,19 @@ description: "使用 Creart AI API 生成图片。适用于所有与图片生成
 
 ## 完整工作流程
 
-### 1. 解析用户意图
+### 1. 确定提示词来源
+
+流程入口先确定用哪个提示词系统构建 prompt，后续所有步骤（意图解析、参数提取）都基于此执行。
+
+```yaml
+# 尝试加载 creart-prompt skill：
+skill: creart-prompt
+```
+
+- **加载成功** → 后续走 **creart-prompt 路线**（步骤 3a），使用其模板体系
+- **加载失败（skill 不存在）** → 后续走 **Fallback 自建路线**（步骤 3b）
+
+### 2. 解析用户意图
 
 从用户描述中提取以下信息：
 
@@ -45,24 +57,19 @@ description: "使用 Creart AI API 生成图片。适用于所有与图片生成
 | Logo/图标 | `1:1` | `1K` | `nano-banana-2` |
 | 高质量艺术 | 按需 | `4K` | `nano-banana-pro` |
 
-### 2. 使用 creart-prompt 构建提示词
+### 3a. 使用 creart-prompt 构建提示词（首选路线）
 
-**必须先通过 skill 工具加载 `creart-prompt` skill 来构建提示词**，不得跳过此步骤直接自写 prompt：
+仅当步骤 1 成功加载了 `creart-prompt` skill 时走此路线。
 
-```yaml
-# 必须先执行：
-skill: creart-prompt
-```
-
-加载后走 `creart-prompt` 的 Advisor 工作流：
+走 `creart-prompt` 的 Advisor 工作流：
 1. 从模板索引中找到匹配的分类和模板文件
 2. 按模板字段填充参数（缺失关键信息则向用户提问）
 3. skill 输出最终 prompt 字符串
 4. 把 prompt 带入当前流程继续执行
 
-### 2b. Fallback（当 creart-prompt 不可用时）
+### 3b. Fallback 自建（备选路线）
 
-仅当 `creart-prompt` skill 无法加载时，回退到以下自构建原则：
+仅当步骤 1 中 `creart-prompt` skill 不可用时走此路线。
 
 **核心原则：用英文提示词生成，效果最佳。**
 
@@ -83,7 +90,7 @@ skill: creart-prompt
 | "水彩风格的花园" | `Beautiful English garden in full bloom, watercolor painting style, soft pastel colors, roses and lavender, dappled sunlight through trees, artistic brushstrokes, delicate details` |
 | "做一个科技感的Logo" | `Minimalist tech company logo, geometric abstract shape, gradient blue to purple, clean lines, modern design, white background, professional, vector style, sharp edges` |
 
-### 3. 模型选择
+### 4. 模型选择
 
 根据场景选择最合适的模型。详细对比见 [references/model_guide.md](references/model_guide.md)。
 
@@ -96,7 +103,7 @@ skill: creart-prompt
 | 设计/创意 | `seedream-5.0-lite` | 色彩表现好 |
 | 批量生成/低消耗 | `nano-banana-2` | 成本最低 |
 
-### 4. 执行生成
+### 5. 执行生成
 
 使用脚本生成图片。**必须通过 `--output` 指定输出到用户当前工作目录（workspace）下**，确保用户能直接看到和访问生成的文件。`/path/to/` 应替换为用户当前工作目录的实际路径。
 
@@ -117,7 +124,7 @@ python3 scripts/generate.py "英文提示词 variant 2" --output /path/to/img_2.
 python3 scripts/generate.py "英文提示词 variant 3" --output /path/to/img_3.png
 ```
 
-### 5. 展示与交付
+### 6. 展示与交付
 
 - 生成后读取图片文件展示给用户
 - 告知文件保存路径
