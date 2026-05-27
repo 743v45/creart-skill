@@ -45,11 +45,24 @@ description: "使用 Creart AI API 生成图片。适用于所有与图片生成
 | Logo/图标 | `1:1` | `1K` | `nano-banana-2` |
 | 高质量艺术 | 按需 | `4K` | `nano-banana-pro` |
 
-### 2. 构建提示词
+### 2. 使用 creart-prompt 构建提示词
 
-**优先使用 `creart-prompt` skill 来构建提示词**（如已安装），它提供更专业的提示词工程能力。
+**必须先通过 skill 工具加载 `creart-prompt` skill 来构建提示词**，不得跳过此步骤直接自写 prompt：
 
-若 `creart-prompt` 不可用，遵循以下原则：
+```yaml
+# 必须先执行：
+skill: creart-prompt
+```
+
+加载后走 `creart-prompt` 的 Advisor 工作流：
+1. 从模板索引中找到匹配的分类和模板文件
+2. 按模板字段填充参数（缺失关键信息则向用户提问）
+3. skill 输出最终 prompt 字符串
+4. 把 prompt 带入当前流程继续执行
+
+### 2b. Fallback（当 creart-prompt 不可用时）
+
+仅当 `creart-prompt` skill 无法加载时，回退到以下自构建原则：
 
 **核心原则：用英文提示词生成，效果最佳。**
 
