@@ -1,6 +1,6 @@
 ---
 name: creart-prompt
-description: advisor-only 提示词顾问
+description: 高质量 prompt 顾问。涵盖 18 大类、80+ 个结构化模板，覆盖海报 / UI / 产品 / 信息图 / 学术图 / 技术架构图 / 漫画 / 头像 / 流程板 / 电影分镜 / IP 周边 / 编辑工作流等场景。
 ---
 
 # Creart Prompt
